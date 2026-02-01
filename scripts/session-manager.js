@@ -18,7 +18,24 @@ class SessionManager {
   }
 
   /**
+   * Find Claude project root by looking for .claude directory
+   * This searches upward from CWD to find the nearest .claude directory
+   * which defines the Claude project boundary
+   */
+  findClaudeProjectRoot() {
+    let dir = this.cwd;
+    while (dir !== path.parse(dir).root) {
+      if (fs.existsSync(path.join(dir, '.claude'))) {
+        return dir;
+      }
+      dir = path.dirname(dir);
+    }
+    return null;
+  }
+
+  /**
    * Check if current directory is within a git repository
+   * (kept for backward compatibility and metadata)
    */
   checkGitRepo() {
     let dir = this.cwd;
@@ -32,57 +49,30 @@ class SessionManager {
   }
 
   /**
-   * Find project root by looking for common project markers
+   * Find project root by looking for .claude directory (Claude project)
+   * Note: This is now an alias for findClaudeProjectRoot for clarity
    */
   findProjectRoot() {
-    const markers = [
-      '.git',
-      'package.json',
-      'pyproject.toml',
-      'Cargo.toml',
-      'go.mod',
-      'pom.xml',
-      'Gemfile',
-      'composer.json',
-      '.claude'
-    ];
-
-    let dir = this.cwd;
-    while (dir !== path.parse(dir).root) {
-      for (const marker of markers) {
-        if (fs.existsSync(path.join(dir, marker))) {
-          return dir;
-        }
-      }
-      dir = path.dirname(dir);
-    }
-    return null;
+    return this.findClaudeProjectRoot();
   }
 
   /**
    * Determine session directory based on context
-   * Priority: Project-specific > Global
+   * Priority: Claude Project (.claude directory) > Global
    */
   determineSessionDir() {
-    // Priority 1: Explicit .claude directory in project
-    if (this.projectRoot && fs.existsSync(path.join(this.projectRoot, '.claude'))) {
-      const projectSessions = path.join(this.projectRoot, '.claude/sessions');
+    // Priority 1: Look for .claude directory (Claude project marker)
+    const claudeProjectRoot = this.findClaudeProjectRoot();
+
+    if (claudeProjectRoot) {
+      const projectSessions = path.join(claudeProjectRoot, '.claude/sessions');
       if (process.stderr.isTTY) {
-        console.error(`📁 Using project-specific sessions: ${projectSessions}`);
+        console.error(`📁 Using Claude project sessions: ${projectSessions}`);
       }
       return projectSessions;
     }
 
-    // Priority 2: Git repo but no .claude directory - create one
-    if (this.projectRoot && this.isGitRepo) {
-      const projectSessions = path.join(this.projectRoot, '.claude/sessions');
-      if (process.stderr.isTTY) {
-        console.error(`📁 Creating project sessions in git repo: ${projectSessions}`);
-      }
-      return projectSessions;
-    }
-
-    // Priority 3: Fall back to global sessions
+    // Priority 2: Fall back to global sessions
     const globalSessions = path.join(require('os').homedir(), '.claude/sessions');
     if (process.stderr.isTTY) {
       console.error(`🌍 Using global sessions: ${globalSessions}`);

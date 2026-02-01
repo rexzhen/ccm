@@ -39,27 +39,26 @@ Plugin (global):           ~/.claude/plugins/ccm/
 
 CCM automatically adapts to your working context:
 
-### 🚀 Project-Specific Mode
-**Activated when you're in a directory with any of these markers:**
-- `.git` folder (Git repository)
-- `.claude` directory (Claude Code configuration)
-- `package.json` (Node.js)
-- `pyproject.toml` (Python)
-- `Cargo.toml` (Rust)
-- `go.mod` (Go)
-- `pom.xml` (Java/Maven)
-- `Gemfile` (Ruby)
-- `composer.json` (PHP)
+### 🚀 Project-Specific Mode (Claude Project)
+**Activated when:** You're in a directory with a `.claude` folder (anywhere in the parent tree)
 
-**Session location:** `<project-root>/.claude/sessions/`
+When you initialize Claude Code in a directory (via `/init` or manually creating `.claude/`), that becomes a **Claude project**. CCM will store all sessions for that project and its subdirectories in one place.
+
+**Session location:** `<claude-project-root>/.claude/sessions/`
+
+**Key behavior:**
+- All subdirectories within a Claude project share the same session storage
+- Example: If `/Users/you/Documents/.claude/` exists, all work in Documents or its subdirectories (like `Documents/workspace/project-a/`) will save sessions to `/Users/you/Documents/.claude/sessions/`
+- This aligns with Claude Code's concept of a "project" - any directory where you've initialized Claude
 
 **Use for:**
-- Dedicated project work
+- Dedicated Claude project work
 - Maintaining separate context per project
-- Team collaboration (optional sharing)
+- Sharing session context across related subdirectories
+- Team collaboration (optional sharing via git)
 
 ### 🌍 Global Mode
-**Activated when:** You're not in a recognized project directory
+**Activated when:** You're not in a directory with `.claude` anywhere in the parent tree
 
 **Session location:** `~/.claude/sessions/`
 
@@ -369,8 +368,8 @@ Verify project detection:
 ```
 
 If you want project-specific sessions but CCM is using global mode:
-- Ensure you have one of the project markers (`.git`, `package.json`, etc.), or
-- Create a `.claude` directory in your project root to explicitly mark it as a project
+- Create a `.claude` directory in your project root (or run `/init`) to mark it as a Claude project
+- CCM only uses the `.claude` directory to detect Claude projects, not software project markers like `.git` or `package.json`
 
 ### Search Not Finding Sessions
 
@@ -430,6 +429,12 @@ MIT License - see [LICENSE](LICENSE) file for details
 Rex Zhen
 
 ## Changelog
+
+### v1.0.1 (2026-01-31)
+- Fixed: Simplified project detection to only use `.claude` directory (Claude projects)
+- Improved: Session manager now correctly handles Claude project hierarchy
+- Changed: Removed confusion between software projects (.git, package.json) and Claude projects
+- All subdirectories within a Claude project now share the same session storage
 
 ### v1.0.0 (2026-01-31)
 - Initial release
