@@ -6,7 +6,7 @@ node_modules/
 npm-debug.log*
 
 # Testing
-.claude/sessions/
+.claude/
 test-sessions/
 
 # OS files

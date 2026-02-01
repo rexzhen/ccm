@@ -2,7 +2,7 @@
 
 ![CCM Social Preview](assets/images/social-preview.png)
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.0.3-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 Context-aware session management for Claude Code. Automatically save conversations, load summaries on startup, and search past sessions with intelligent project-specific or global context detection.
@@ -108,6 +108,23 @@ claude plugin list
 # You should see ccm in the list
 ```
 
+### Testing Transcript Capture
+
+To verify that the plugin correctly captures conversation transcripts:
+
+```bash
+cd ~/.claude/plugins/ccm  # or wherever you cloned the plugin
+./test-transcript-capture.sh
+```
+
+This test script will:
+- Create a mock conversation transcript
+- Simulate a SessionEnd hook
+- Verify that the transcript is captured and processed
+- Display the generated summary with conversation highlights
+
+All tests should pass with ✓ marks.
+
 ### Alternative: GitHub Marketplace (Coming Soon)
 
 Once published to a public marketplace, users will be able to install with a single command:
@@ -118,23 +135,44 @@ claude plugin marketplace add rexzhen/ccm
 claude plugin install ccm
 ```
 
+## How Sessions Are Captured
+
+CCM automatically captures your conversation transcripts using Claude Code's SessionEnd hook system:
+
+1. **During Session**: Claude Code maintains a full transcript of your conversation in a JSONL file
+2. **When You Exit**: The SessionEnd hook triggers, passing the transcript file path to CCM
+3. **Transcript Processing**: CCM reads and parses the JSONL transcript to extract:
+   - Conversation exchanges (first 3 for summary preview)
+   - Files mentioned or modified
+   - Message count and metadata
+4. **Storage**: Full transcript and summary saved to context-aware location
+
+**No user configuration required** - this works automatically with zero setup beyond plugin installation.
+
 ## Usage
 
 ### Automatic Operation (Recommended)
 
 CCM works automatically without commands:
 
-1. **Session Start**: Summary from last session automatically appears
-2. **During Work**: Continue conversation normally
-3. **Session End**: Session automatically saved when you exit
+1. **Session Start**: Summary from last session automatically appears with conversation highlights
+2. **During Work**: Continue conversation normally - transcript is captured automatically
+3. **Session End**: Full session with transcript automatically saved when you exit
 
 ### Manual Commands
 
-#### View Session Context
+#### Browse Session History
 ```bash
-/ccm-info
+/ccm-history
 ```
-Shows current mode (project/global), session directory, and project details.
+Browse recent sessions with context info (mode, directory, project details).
+
+#### Search Sessions
+```bash
+/ccm-history "authentication"
+/ccm-history "bug fix"
+```
+Search past sessions in current context for specific topics.
 
 #### Manual Save
 ```bash
@@ -142,20 +180,6 @@ Shows current mode (project/global), session directory, and project details.
 /ccm-save "Completed authentication feature"
 ```
 Manually save session with optional custom message.
-
-#### Search Sessions
-```bash
-/ccm-search "authentication"
-/ccm-search "bug fix"
-```
-Search past sessions in current context for specific topics.
-
-#### List Recent Sessions
-```bash
-/ccm-list
-/ccm-list 20
-```
-List recent sessions (default: 10 most recent).
 
 ## How Plugin vs Session Storage Works
 
@@ -214,31 +238,33 @@ claude
 # Shows: Last global conversation
 ```
 
-### Scenario 2: Search Within Context
+### Scenario 2: Browse and Search
 
 ```bash
-# In project-a
-/ccm-search "database migration"
-# Searches only project-a sessions
-
-# In project-b
-/ccm-search "database migration"
-# Searches only project-b sessions (different results!)
-```
-
-### Scenario 3: Check Your Context
-
-```bash
-/ccm-info
+# Browse recent sessions with context info
+/ccm-history
 
 # Output:
-## Current Session Context
-
+## Session History
 **Mode:** 🚀 Project-specific
 **Session Directory:** `/Users/you/projects/api/.claude/sessions`
 **Project Root:** `/Users/you/projects/api`
 **Project Name:** api
-**Git Repository:** Yes ✓
+
+### Recent Sessions
+1. 2026-01-31T14-30-22-000Z.json
+   Date: 1/31/2026, 2:30:22 PM
+   Project: api
+...
+
+# Search in project-a
+/ccm-history "database migration"
+# Searches only project-a sessions
+
+# Switch to project-b
+cd ~/projects/project-b
+/ccm-history "database migration"
+# Searches only project-b sessions (different results!)
 ```
 
 ## Directory Structure
@@ -309,21 +335,17 @@ Edit `hooks/hooks.json` to customize auto-save behavior:
 You can also use the session manager directly:
 
 ```bash
-# Load latest summary
-node ~/.claude/plugins/ccm/scripts/session-manager.js load
-
 # Save session manually
 node ~/.claude/plugins/ccm/scripts/session-manager.js save "Custom message"
 
+# Browse sessions with context info
+node ~/.claude/plugins/ccm/scripts/session-manager.js history
+
 # Search sessions
-node ~/.claude/plugins/ccm/scripts/session-manager.js search "query"
-
-# Show context info
-node ~/.claude/plugins/ccm/scripts/session-manager.js info
-
-# List sessions
-node ~/.claude/plugins/ccm/scripts/session-manager.js list 20
+node ~/.claude/plugins/ccm/scripts/session-manager.js history "query"
 ```
+
+Note: Session summary auto-loads on startup via hooks, so no manual load command is needed.
 
 ## Requirements
 
@@ -338,13 +360,10 @@ ccm/
 ├── .claude-plugin/
 │   └── plugin.json          # Plugin manifest
 ├── skills/
-│   ├── ccm-load/            # Auto-load summary skill
 │   ├── ccm-save/            # Manual save skill
-│   ├── ccm-search/          # Search sessions skill
-│   ├── ccm-info/            # Context info skill
-│   └── ccm-list/            # List sessions skill
+│   └── ccm-history/         # Browse and search sessions skill
 ├── hooks/
-│   └── hooks.json           # Auto-save on session end
+│   └── hooks.json           # Auto-save/load on session start/end
 ├── scripts/
 │   └── session-manager.js   # Core session management logic
 ├── package.json
@@ -355,16 +374,16 @@ ccm/
 
 ### Sessions Not Auto-Loading
 
-Check that the skill is enabled:
+Check that hooks are working:
 ```bash
-/ccm-info
+/ccm-history
 ```
 
 ### Sessions Saving to Wrong Location
 
 Verify project detection:
 ```bash
-/ccm-info
+/ccm-history
 ```
 
 If you want project-specific sessions but CCM is using global mode:
@@ -430,18 +449,12 @@ Rex Zhen
 
 ## Changelog
 
-### v1.0.1 (2026-01-31)
-- Fixed: Simplified project detection to only use `.claude` directory (Claude projects)
-- Improved: Session manager now correctly handles Claude project hierarchy
-- Changed: Removed confusion between software projects (.git, package.json) and Claude projects
-- All subdirectories within a Claude project now share the same session storage
-
-### v1.0.0 (2026-01-31)
-- Initial release
-- Context-aware session management
-- Auto-save and auto-load functionality
-- Search and list commands
-- Project-specific and global session support
+### v1.0.3 (2026-02-01)
+- Fresh start version with clean, simplified command structure
+- Two main commands: `/ccm-save` and `/ccm-history`
+- Automatic session save/load via hooks
+- Context-aware project-specific or global session management
+- Full conversation transcript capture and summarization
 
 ## Support
 

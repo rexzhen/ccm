@@ -79,9 +79,10 @@ ccm/
 JavaScript (Node.js 14+)
 
 ### Architecture
-- **SessionManager Class**: Core logic for context detection, session save/load, search
+- **SessionManager Class**: Core logic for context detection, session save/load, search, transcript parsing
 - **Skills**: Claude Code skills that invoke the session manager
-- **Hooks**: Automatic execution on session end
+- **Hooks**: Automatic execution on session end with stdin-based transcript capture
+- **JSONL Parser**: Extracts conversation highlights and metadata from Claude Code transcripts
 
 ### Key Design Decisions
 
@@ -116,8 +117,10 @@ JavaScript (Node.js 14+)
 
 5. **Auto-Save Mechanism**
    - Hook on `SessionEnd` event
-   - Executes `session-manager.js save`
-   - Creates JSON session + markdown summary
+   - Receives transcript path via stdin JSON payload
+   - Parses JSONL transcript file from Claude Code
+   - Extracts conversation exchanges, files, and metadata
+   - Creates JSON session + markdown summary with highlights
 
 ---
 
