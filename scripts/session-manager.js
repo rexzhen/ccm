@@ -10,19 +10,18 @@ const path = require('path');
 class SessionManager {
   constructor() {
     this.cwd = process.cwd();
-    this.isGitRepo = this.checkGitRepo();
     this.projectRoot = this.findProjectRoot();
 
     // Decide session location based on context
     this.sessionDir = this.determineSessionDir();
   }
 
+
+
   /**
-   * Find Claude project root by looking for .claude directory
-   * This searches upward from CWD to find the nearest .claude directory
-   * which defines the Claude project boundary
+   * Find project root by looking for .claude directory (Claude project)
    */
-  findClaudeProjectRoot() {
+  findProjectRoot() {
     let dir = this.cwd;
     while (dir !== path.parse(dir).root) {
       if (fs.existsSync(path.join(dir, '.claude'))) {
@@ -34,45 +33,20 @@ class SessionManager {
   }
 
   /**
-   * Check if current directory is within a git repository
-   * (kept for backward compatibility and metadata)
-   */
-  checkGitRepo() {
-    let dir = this.cwd;
-    while (dir !== path.parse(dir).root) {
-      if (fs.existsSync(path.join(dir, '.git'))) {
-        return true;
-      }
-      dir = path.dirname(dir);
-    }
-    return false;
-  }
-
-  /**
-   * Find project root by looking for .claude directory (Claude project)
-   * Note: This is now an alias for findClaudeProjectRoot for clarity
-   */
-  findProjectRoot() {
-    return this.findClaudeProjectRoot();
-  }
-
-  /**
    * Determine session directory based on context
    * Priority: Claude Project (.claude directory) > Global
    */
   determineSessionDir() {
-    // Priority 1: Look for .claude directory (Claude project marker)
-    const claudeProjectRoot = this.findClaudeProjectRoot();
-
-    if (claudeProjectRoot) {
-      const projectSessions = path.join(claudeProjectRoot, '.claude/sessions');
+    // If in a Claude project, use project-specific sessions
+    if (this.projectRoot) {
+      const projectSessions = path.join(this.projectRoot, '.claude/sessions');
       if (process.stderr.isTTY) {
         console.error(`📁 Using Claude project sessions: ${projectSessions}`);
       }
       return projectSessions;
     }
 
-    // Priority 2: Fall back to global sessions
+    // Otherwise, use global sessions
     const globalSessions = path.join(require('os').homedir(), '.claude/sessions');
     if (process.stderr.isTTY) {
       console.error(`🌍 Using global sessions: ${globalSessions}`);
@@ -243,7 +217,6 @@ ${data.topics ? `\n## Topics Discussed\n${data.topics.map(t => `- ${t}`).join('\
     return {
       sessionDir: this.sessionDir,
       projectRoot: this.projectRoot,
-      isGitRepo: this.isGitRepo,
       projectName: this.projectRoot ? path.basename(this.projectRoot) : null,
       mode: this.projectRoot ? 'project' : 'global'
     };
@@ -346,7 +319,6 @@ if (require.main === module) {
       if (info.projectName) {
         console.log(`**Project Name:** ${info.projectName}`);
       }
-      console.log(`**Git Repository:** ${info.isGitRepo ? 'Yes ✓' : 'No'}`);
       console.log('');
       break;
 

@@ -2,7 +2,7 @@
 name: ccm-load
 description: Automatically load and display the latest session summary based on current context - project-specific if in a project directory, global otherwise. Shows context from previous conversations.
 disable-model-invocation: false
-user-invocable: false
+user-invocable: true
 allowed-tools: Bash(node *)
 ---
 
