@@ -38,10 +38,16 @@ Plugin (global):           ~/.claude/plugins/ccm/
 CCM automatically adapts to your working context:
 
 ### 🚀 Project-Specific Mode
-**Activated when you're in a directory with:**
+**Activated when you're in a directory with any of these markers:**
 - `.git` folder (Git repository)
-- `package.json`, `pyproject.toml`, `Cargo.toml`, etc.
-- Existing `.claude` directory
+- `.claude` directory (Claude Code configuration)
+- `package.json` (Node.js)
+- `pyproject.toml` (Python)
+- `Cargo.toml` (Rust)
+- `go.mod` (Go)
+- `pom.xml` (Java/Maven)
+- `Gemfile` (Ruby)
+- `composer.json` (PHP)
 
 **Session location:** `<project-root>/.claude/sessions/`
 
@@ -331,9 +337,9 @@ Verify project detection:
 /ccm-info
 ```
 
-If you want project-specific sessions but CCM is using global:
-- Ensure you're in a git repository, or
-- Create a `.claude` directory in your project root
+If you want project-specific sessions but CCM is using global mode:
+- Ensure you have one of the project markers (`.git`, `package.json`, etc.), or
+- Create a `.claude` directory in your project root to explicitly mark it as a project
 
 ### Search Not Finding Sessions
 
