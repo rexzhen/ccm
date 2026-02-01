@@ -16,6 +16,25 @@ Context-aware session management for Claude Code. Automatically save conversatio
 
 ## How It Works
 
+**Plugin Location (Global):** `~/.claude/plugins/ccm` (installed once, works everywhere)
+
+**Session Storage (Automatic):** CCM detects your working directory and saves sessions accordingly:
+
+```
+Plugin (global):           ~/.claude/plugins/ccm/
+                                    |
+                                    v
+                          [Automatic Detection]
+                                    |
+                    +---------------+---------------+
+                    |                               |
+            In a project?                    Outside projects?
+                    |                               |
+                    v                               v
+        <project>/.claude/sessions/        ~/.claude/sessions/
+        (project-specific)                   (global)
+```
+
 CCM automatically adapts to your working context:
 
 ### 🚀 Project-Specific Mode
@@ -43,31 +62,23 @@ CCM automatically adapts to your working context:
 
 ## Installation
 
-### Option 1: Clone and Use (Recommended)
+**Important:** The plugin itself installs globally, but it automatically manages sessions per-project or globally based on your working directory.
+
+### Recommended: Global Installation
 
 ```bash
-# Clone to Claude Code plugins directory
+# Install plugin globally (works for ALL projects)
 git clone https://github.com/rexzhen/ccm ~/.claude/plugins/ccm
-
-# Or for project-specific installation
-cd your-project
-git clone https://github.com/rexzhen/ccm .claude/plugins/ccm
 ```
 
-### Option 2: Git Submodule (Team Projects)
+That's it! The plugin is now active. Session storage location is determined automatically:
+- **In a project directory:** Sessions saved to `<project>/.claude/sessions/`
+- **Outside projects:** Sessions saved to `~/.claude/sessions/`
+
+### Alternative: Temporary Testing
 
 ```bash
-cd your-project
-git submodule add https://github.com/rexzhen/ccm .claude/plugins/ccm
-```
-
-### Option 3: Manual Setup
-
-```bash
-# Copy plugin to your preferred location
-cp -r /path/to/ccm ~/.claude/plugins/ccm
-
-# Or use with --plugin-dir flag
+# Test without installing (temporary, one-time use)
 claude --plugin-dir /path/to/ccm
 ```
 
@@ -109,6 +120,39 @@ Search past sessions in current context for specific topics.
 /ccm-list 20
 ```
 List recent sessions (default: 10 most recent).
+
+## How Plugin vs Session Storage Works
+
+### Plugin Installation (One-Time, Global):
+```bash
+# Install plugin once
+git clone https://github.com/rexzhen/ccm ~/.claude/plugins/ccm
+
+# Now CCM is available in ALL Claude Code sessions
+```
+
+### Session Storage (Automatic Per Context):
+```bash
+# Working on Project A
+cd ~/projects/project-a
+claude
+# Plugin loaded from: ~/.claude/plugins/ccm/
+# Sessions saved to:   ~/projects/project-a/.claude/sessions/
+
+# Working on Project B
+cd ~/projects/project-b
+claude
+# Plugin loaded from: ~/.claude/plugins/ccm/ (same plugin)
+# Sessions saved to:   ~/projects/project-b/.claude/sessions/ (different location!)
+
+# Quick question (not in a project)
+cd ~
+claude
+# Plugin loaded from: ~/.claude/plugins/ccm/ (same plugin)
+# Sessions saved to:   ~/.claude/sessions/ (global location)
+```
+
+**Key Point:** One plugin installation, automatic context detection!
 
 ## Examples
 
