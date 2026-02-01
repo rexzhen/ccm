@@ -1,0 +1,24 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "ccm-marketplace",
+  "description": "Local marketplace for Claude Code Memory Management plugin",
+  "owner": {
+    "name": "Rex Zhen",
+    "email": "rex.zhen@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "ccm",
+      "description": "Automatically save sessions, load summaries, and search conversation history with context-aware project-specific or global session management",
+      "version": "1.0.0",
+      "author": {
+        "name": "Rex Zhen",
+        "email": "rex.zhen@gmail.com",
+        "url": "https://github.com/rexzhen"
+      },
+      "source": "./",
+      "category": "productivity",
+      "homepage": "https://github.com/rexzhen/ccm"
+    }
+  ]
+}

@@ -72,22 +72,51 @@ CCM automatically adapts to your working context:
 
 **Important:** The plugin itself installs globally, but it automatically manages sessions per-project or globally based on your working directory.
 
-### Recommended: Global Installation
+### Step 1: Clone the Repository
 
 ```bash
-# Install plugin globally (works for ALL projects)
-git clone https://github.com/rexzhen/ccm ~/.claude/plugins/ccm
+# Clone to a local directory (anywhere you like)
+git clone https://github.com/rexzhen/ccm ~/ccm-plugin
+# or
+git clone https://github.com/rexzhen/ccm ~/Documents/plugins/ccm
+```
+
+### Step 2: Add as a Marketplace
+
+```bash
+# Add the plugin as a local marketplace
+claude plugin marketplace add ~/ccm-plugin
+# or wherever you cloned it
+```
+
+### Step 3: Install the Plugin
+
+```bash
+# Install ccm from the marketplace
+claude plugin install ccm
 ```
 
 That's it! The plugin is now active. Session storage location is determined automatically:
 - **In a project directory:** Sessions saved to `<project>/.claude/sessions/`
 - **Outside projects:** Sessions saved to `~/.claude/sessions/`
 
-### Alternative: Temporary Testing
+### Verification
 
 ```bash
-# Test without installing (temporary, one-time use)
-claude --plugin-dir /path/to/ccm
+# List installed plugins
+claude plugin list
+
+# You should see ccm in the list
+```
+
+### Alternative: GitHub Marketplace (Coming Soon)
+
+Once published to a public marketplace, users will be able to install with a single command:
+
+```bash
+# Future: Direct installation from GitHub
+claude plugin marketplace add rexzhen/ccm
+claude plugin install ccm
 ```
 
 ## Usage
