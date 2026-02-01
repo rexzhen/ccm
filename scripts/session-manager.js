@@ -1,0 +1,411 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * Context-aware session manager for Claude Code
+ * Automatically detects project context and manages sessions accordingly
+ */
+class SessionManager {
+  constructor() {
+    this.cwd = process.cwd();
+    this.isGitRepo = this.checkGitRepo();
+    this.projectRoot = this.findProjectRoot();
+
+    // Decide session location based on context
+    this.sessionDir = this.determineSessionDir();
+  }
+
+  /**
+   * Check if current directory is within a git repository
+   */
+  checkGitRepo() {
+    let dir = this.cwd;
+    while (dir !== path.parse(dir).root) {
+      if (fs.existsSync(path.join(dir, '.git'))) {
+        return true;
+      }
+      dir = path.dirname(dir);
+    }
+    return false;
+  }
+
+  /**
+   * Find project root by looking for common project markers
+   */
+  findProjectRoot() {
+    const markers = [
+      '.git',
+      'package.json',
+      'pyproject.toml',
+      'Cargo.toml',
+      'go.mod',
+      'pom.xml',
+      'Gemfile',
+      'composer.json',
+      '.claude'
+    ];
+
+    let dir = this.cwd;
+    while (dir !== path.parse(dir).root) {
+      for (const marker of markers) {
+        if (fs.existsSync(path.join(dir, marker))) {
+          return dir;
+        }
+      }
+      dir = path.dirname(dir);
+    }
+    return null;
+  }
+
+  /**
+   * Determine session directory based on context
+   * Priority: Project-specific > Global
+   */
+  determineSessionDir() {
+    // Priority 1: Explicit .claude directory in project
+    if (this.projectRoot && fs.existsSync(path.join(this.projectRoot, '.claude'))) {
+      const projectSessions = path.join(this.projectRoot, '.claude/sessions');
+      if (process.stderr.isTTY) {
+        console.error(`📁 Using project-specific sessions: ${projectSessions}`);
+      }
+      return projectSessions;
+    }
+
+    // Priority 2: Git repo but no .claude directory - create one
+    if (this.projectRoot && this.isGitRepo) {
+      const projectSessions = path.join(this.projectRoot, '.claude/sessions');
+      if (process.stderr.isTTY) {
+        console.error(`📁 Creating project sessions in git repo: ${projectSessions}`);
+      }
+      return projectSessions;
+    }
+
+    // Priority 3: Fall back to global sessions
+    const globalSessions = path.join(require('os').homedir(), '.claude/sessions');
+    if (process.stderr.isTTY) {
+      console.error(`🌍 Using global sessions: ${globalSessions}`);
+    }
+    return globalSessions;
+  }
+
+  /**
+   * Ensure all required directories exist
+   */
+  ensureDirectories() {
+    const dirs = [
+      this.sessionDir,
+      path.join(this.sessionDir, 'summaries'),
+      path.join(this.sessionDir, 'archives')
+    ];
+
+    dirs.forEach(dir => {
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    });
+  }
+
+  /**
+   * Get the latest session summary
+   */
+  getLatestSummary() {
+    this.ensureDirectories();
+    const summaryPath = path.join(this.sessionDir, 'summaries/latest.md');
+    if (fs.existsSync(summaryPath)) {
+      return fs.readFileSync(summaryPath, 'utf8');
+    }
+    return null;
+  }
+
+  /**
+   * Save session data with timestamp
+   */
+  saveSession(sessionData = {}) {
+    this.ensureDirectories();
+
+    const timestamp = new Date().toISOString();
+    const filename = `${timestamp.replace(/[:.]/g, '-')}.json`;
+    const filepath = path.join(this.sessionDir, filename);
+
+    const data = {
+      timestamp,
+      workingDir: this.cwd,
+      projectRoot: this.projectRoot,
+      isProjectSession: this.projectRoot !== null,
+      projectName: this.projectRoot ? path.basename(this.projectRoot) : null,
+      ...sessionData
+    };
+
+    fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
+
+    // Update summary
+    this.saveSummary(data);
+
+    return { filename, filepath, data };
+  }
+
+  /**
+   * Generate and save session summary
+   */
+  saveSummary(sessionData) {
+    const summary = this.generateSummary(sessionData);
+    const summaryPath = path.join(this.sessionDir, 'summaries/latest.md');
+    const date = new Date().toISOString().split('T')[0];
+    const datedSummary = path.join(this.sessionDir, 'summaries', `${date}.md`);
+
+    fs.writeFileSync(summaryPath, summary);
+    fs.writeFileSync(datedSummary, summary);
+  }
+
+  /**
+   * Generate markdown summary from session data
+   */
+  generateSummary(data) {
+    const location = data.projectRoot
+      ? `Project: **${path.basename(data.projectRoot)}**`
+      : 'Global session';
+
+    const contextType = data.projectRoot ? '🚀 Project-specific session' : '🌍 Global session';
+
+    return `# Session Summary
+
+**Date:** ${new Date(data.timestamp).toLocaleString()}
+**Location:** ${location}
+**Working Directory:** \`${data.workingDir}\`
+${data.projectRoot ? `**Project Root:** \`${data.projectRoot}\`` : ''}
+
+## Context
+${contextType}
+
+## Summary
+${data.summary || 'Session automatically saved by CCM.'}
+
+${data.filesModified ? `\n## Files Modified\n${data.filesModified.map(f => `- ${f}`).join('\n')}` : ''}
+
+${data.topics ? `\n## Topics Discussed\n${data.topics.map(t => `- ${t}`).join('\n')}` : ''}
+
+---
+*Generated by CCM Plugin v1.0.0*
+*Context-aware session management*
+`;
+  }
+
+  /**
+   * Search sessions for a query string
+   */
+  searchSessions(query) {
+    this.ensureDirectories();
+
+    const sessionFiles = fs.readdirSync(this.sessionDir)
+      .filter(f => f.endsWith('.json'))
+      .sort()
+      .reverse(); // Most recent first
+
+    const results = [];
+
+    for (const file of sessionFiles) {
+      try {
+        const content = fs.readFileSync(path.join(this.sessionDir, file), 'utf8');
+        const data = JSON.parse(content);
+        const searchable = JSON.stringify(data).toLowerCase();
+
+        if (searchable.includes(query.toLowerCase())) {
+          results.push({
+            filename: file,
+            timestamp: data.timestamp,
+            projectName: data.projectName,
+            workingDir: data.workingDir,
+            excerpt: this.generateExcerpt(data, query)
+          });
+        }
+      } catch (error) {
+        console.error(`Error reading ${file}:`, error.message);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Generate a brief excerpt showing query context
+   */
+  generateExcerpt(data, query) {
+    const text = JSON.stringify(data);
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    const index = lowerText.indexOf(lowerQuery);
+
+    if (index === -1) return '';
+
+    const start = Math.max(0, index - 50);
+    const end = Math.min(text.length, index + query.length + 50);
+    const excerpt = text.substring(start, end);
+
+    return '...' + excerpt + '...';
+  }
+
+  /**
+   * Get context information
+   */
+  getContextInfo() {
+    return {
+      sessionDir: this.sessionDir,
+      projectRoot: this.projectRoot,
+      isGitRepo: this.isGitRepo,
+      projectName: this.projectRoot ? path.basename(this.projectRoot) : null,
+      mode: this.projectRoot ? 'project' : 'global'
+    };
+  }
+
+  /**
+   * List all sessions in current context
+   */
+  listSessions(limit = 10) {
+    this.ensureDirectories();
+
+    const sessionFiles = fs.readdirSync(this.sessionDir)
+      .filter(f => f.endsWith('.json'))
+      .sort()
+      .reverse()
+      .slice(0, limit);
+
+    return sessionFiles.map(file => {
+      try {
+        const content = fs.readFileSync(path.join(this.sessionDir, file), 'utf8');
+        const data = JSON.parse(content);
+        return {
+          filename: file,
+          timestamp: data.timestamp,
+          projectName: data.projectName,
+          workingDir: data.workingDir
+        };
+      } catch (error) {
+        return { filename: file, error: error.message };
+      }
+    });
+  }
+}
+
+// ============================================================================
+// CLI Interface
+// ============================================================================
+
+if (require.main === module) {
+  const command = process.argv[2];
+  const arg = process.argv[3];
+
+  const manager = new SessionManager();
+
+  switch (command) {
+    case 'load':
+      const summary = manager.getLatestSummary();
+      if (summary) {
+        console.log(summary);
+      } else {
+        console.log('## No Previous Session');
+        console.log('\nNo previous session found in this context.');
+        console.log('This is a fresh start! 🎉\n');
+      }
+      break;
+
+    case 'save':
+      const sessionData = {
+        summary: arg || 'Session saved via CLI',
+        transcript: process.env.CLAUDE_SESSION_TRANSCRIPT || '',
+        metadata: process.env.CLAUDE_SESSION_METADATA || '{}'
+      };
+      const result = manager.saveSession(sessionData);
+      console.log(`✅ Session saved: ${result.filename}`);
+      console.log(`📁 Location: ${result.filepath}`);
+      break;
+
+    case 'search':
+      if (!arg) {
+        console.log('❌ Usage: session-manager.js search <query>');
+        process.exit(1);
+      }
+      const results = manager.searchSessions(arg);
+      console.log(`\n## Search Results for "${arg}"\n`);
+      if (results.length === 0) {
+        console.log('No matching sessions found.');
+      } else {
+        console.log(`Found ${results.length} matching session(s):\n`);
+        results.forEach((r, i) => {
+          console.log(`### ${i + 1}. ${r.filename}`);
+          console.log(`**Date:** ${new Date(r.timestamp).toLocaleString()}`);
+          if (r.projectName) {
+            console.log(`**Project:** ${r.projectName}`);
+          }
+          console.log(`**Directory:** \`${r.workingDir}\``);
+          if (r.excerpt) {
+            console.log(`**Match:** ${r.excerpt}`);
+          }
+          console.log('');
+        });
+      }
+      break;
+
+    case 'info':
+      const info = manager.getContextInfo();
+      console.log('\n## Current Session Context\n');
+      console.log(`**Mode:** ${info.mode === 'project' ? '🚀 Project-specific' : '🌍 Global'}`);
+      console.log(`**Session Directory:** \`${info.sessionDir}\``);
+      console.log(`**Project Root:** ${info.projectRoot ? `\`${info.projectRoot}\`` : 'None (global mode)'}`);
+      if (info.projectName) {
+        console.log(`**Project Name:** ${info.projectName}`);
+      }
+      console.log(`**Git Repository:** ${info.isGitRepo ? 'Yes ✓' : 'No'}`);
+      console.log('');
+      break;
+
+    case 'list':
+      const limit = parseInt(arg) || 10;
+      const sessions = manager.listSessions(limit);
+      console.log(`\n## Recent Sessions (${sessions.length})\n`);
+      sessions.forEach((s, i) => {
+        console.log(`${i + 1}. ${s.filename}`);
+        if (s.timestamp) {
+          console.log(`   Date: ${new Date(s.timestamp).toLocaleString()}`);
+          if (s.projectName) {
+            console.log(`   Project: ${s.projectName}`);
+          }
+        }
+        if (s.error) {
+          console.log(`   Error: ${s.error}`);
+        }
+        console.log('');
+      });
+      break;
+
+    default:
+      console.log(`
+Claude Code Memory Management (CCM) v1.0.0
+
+Usage: session-manager.js <command> [args]
+
+Commands:
+  load              Load and display the latest session summary
+  save [message]    Save current session with optional message
+  search <query>    Search sessions for a query string
+  info              Display current context information
+  list [limit]      List recent sessions (default: 10)
+
+Examples:
+  node session-manager.js load
+  node session-manager.js save "Completed authentication feature"
+  node session-manager.js search "authentication"
+  node session-manager.js info
+  node session-manager.js list 20
+
+Context Detection:
+  CCM automatically detects if you're in a project directory and stores
+  sessions accordingly:
+  - Project-specific: <project-root>/.claude/sessions/
+  - Global: ~/.claude/sessions/
+      `);
+  }
+}
+
+module.exports = SessionManager;

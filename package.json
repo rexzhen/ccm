@@ -1,0 +1,32 @@
+{
+  "name": "claude-code-memory-management",
+  "version": "1.0.0",
+  "description": "Context-aware session management for Claude Code",
+  "main": "scripts/session-manager.js",
+  "bin": {
+    "ccm": "./scripts/session-manager.js"
+  },
+  "scripts": {
+    "test": "node scripts/session-manager.js info"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "session",
+    "memory",
+    "context"
+  ],
+  "author": "Rex Zhen <rex.zhen@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rexzhen/ccm"
+  },
+  "bugs": {
+    "url": "https://github.com/rexzhen/ccm/issues"
+  },
+  "homepage": "https://github.com/rexzhen/ccm#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

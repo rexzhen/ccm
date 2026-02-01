@@ -1,0 +1,23 @@
+{
+  "name": "ccm",
+  "displayName": "Claude Code Memory Management",
+  "description": "Automatically save sessions, load summaries, and search conversation history with context-aware project-specific or global session management",
+  "version": "1.0.0",
+  "author": {
+    "name": "Rex Zhen",
+    "email": "rex.zhen@gmail.com",
+    "url": "https://github.com/rexzhen"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rexzhen/ccm"
+  },
+  "keywords": [
+    "session",
+    "memory",
+    "history",
+    "persistence",
+    "context",
+    "project-management"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "SessionEnd": [
+      {
+        "type": "command",
+        "command": "node ${PLUGIN_DIR}/scripts/session-manager.js save"
+      }
+    ]
+  }
+}
