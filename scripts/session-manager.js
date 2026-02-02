@@ -14,9 +14,35 @@ class SessionManager {
 
     // Decide session location based on context
     this.sessionDir = this.determineSessionDir();
+
+    // Load configuration
+    this.config = this.loadConfig();
   }
 
 
+
+  /**
+   * Load plugin configuration
+   */
+  loadConfig() {
+    const configPath = path.join(__dirname, '../.claude-plugin/config.json');
+    try {
+      if (fs.existsSync(configPath)) {
+        const configData = fs.readFileSync(configPath, 'utf8');
+        return JSON.parse(configData);
+      }
+    } catch (error) {
+      if (process.stderr.isTTY) {
+        console.error(`Warning: Failed to load config: ${error.message}`);
+      }
+    }
+    // Return defaults if config doesn't exist or fails to load
+    return {
+      maxStorageMB: 500,
+      cleanupEnabled: true,
+      preserveLatestSummary: true
+    };
+  }
 
   /**
    * Find project root by looking for .claude directory (Claude project)
@@ -107,6 +133,11 @@ class SessionManager {
 
     // Update summary
     this.saveSummary(data);
+
+    // Auto-cleanup if enabled
+    if (this.config.cleanupEnabled) {
+      this.cleanupOldSessions();
+    }
 
     return { filename, filepath, data };
   }
@@ -573,6 +604,113 @@ ${decisionsSection}${nextStepsSection}${topicsSection}${messageStats}
       }
     });
   }
+
+  /**
+   * Calculate total size of session directory in MB
+   */
+  getSessionStorageSize() {
+    this.ensureDirectories();
+    let totalSize = 0;
+
+    const calculateDirSize = (dir) => {
+      const files = fs.readdirSync(dir, { withFileTypes: true });
+      for (const file of files) {
+        const filepath = path.join(dir, file.name);
+        if (file.isDirectory()) {
+          calculateDirSize(filepath);
+        } else {
+          try {
+            const stats = fs.statSync(filepath);
+            totalSize += stats.size;
+          } catch (error) {
+            // Skip files that can't be read
+          }
+        }
+      }
+    };
+
+    calculateDirSize(this.sessionDir);
+    return totalSize / (1024 * 1024); // Convert to MB
+  }
+
+  /**
+   * Clean up old sessions to stay under storage limit
+   */
+  cleanupOldSessions() {
+    const maxSizeMB = this.config.maxStorageMB || 500;
+    const currentSizeMB = this.getSessionStorageSize();
+
+    if (currentSizeMB <= maxSizeMB) {
+      return { cleaned: false, reason: 'under_limit', currentSizeMB, maxSizeMB };
+    }
+
+    // Get all session files sorted by timestamp (oldest first)
+    const sessionFiles = fs.readdirSync(this.sessionDir)
+      .filter(f => f.endsWith('.json') || f.endsWith('.jsonl'))
+      .map(f => ({
+        name: f,
+        path: path.join(this.sessionDir, f),
+        stats: fs.statSync(path.join(this.sessionDir, f))
+      }))
+      .sort((a, b) => a.stats.mtime - b.stats.mtime); // Oldest first
+
+    const latestSummaryPath = path.join(this.sessionDir, 'summaries/latest.md');
+    let deletedCount = 0;
+    let freedSpaceMB = 0;
+
+    // Delete oldest sessions until we're under the limit
+    for (const file of sessionFiles) {
+      const newSizeMB = this.getSessionStorageSize();
+      if (newSizeMB <= maxSizeMB * 0.9) { // Stop at 90% of limit to avoid frequent cleanup
+        break;
+      }
+
+      try {
+        const sizeMB = file.stats.size / (1024 * 1024);
+        fs.unlinkSync(file.path);
+        deletedCount++;
+        freedSpaceMB += sizeMB;
+      } catch (error) {
+        if (process.stderr.isTTY) {
+          console.error(`Failed to delete ${file.name}: ${error.message}`);
+        }
+      }
+    }
+
+    // Also clean up old dated summaries to save space
+    const summariesDir = path.join(this.sessionDir, 'summaries');
+    if (fs.existsSync(summariesDir)) {
+      const summaryFiles = fs.readdirSync(summariesDir)
+        .filter(f => f !== 'latest.md' && f.endsWith('.md'))
+        .map(f => ({
+          name: f,
+          path: path.join(summariesDir, f),
+          stats: fs.statSync(path.join(summariesDir, f))
+        }))
+        .sort((a, b) => a.stats.mtime - b.stats.mtime);
+
+      // Keep only the last 30 dated summaries
+      const summariesToDelete = summaryFiles.slice(0, -30);
+      for (const file of summariesToDelete) {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (error) {
+          // Ignore errors
+        }
+      }
+    }
+
+    const finalSizeMB = this.getSessionStorageSize();
+
+    return {
+      cleaned: true,
+      deletedCount,
+      freedSpaceMB: freedSpaceMB.toFixed(2),
+      beforeSizeMB: currentSizeMB.toFixed(2),
+      afterSizeMB: finalSizeMB.toFixed(2),
+      maxSizeMB
+    };
+  }
 }
 
 // ============================================================================
@@ -734,6 +872,11 @@ Context Detection:
   sessions accordingly:
   - Project-specific: <project-root>/.claude/sessions/
   - Global: ~/.claude/sessions/
+
+Storage Management:
+  Sessions are automatically cleaned up when storage exceeds the limit.
+  Default limit: 500 MB (configurable in .claude-plugin/config.json)
+  Cleanup removes oldest sessions first, always preserving latest summary.
 
 Note:
   Session summary auto-loads on startup via hooks (no manual load command needed)

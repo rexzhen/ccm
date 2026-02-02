@@ -2,7 +2,7 @@
 
 ![CCM Social Preview](assets/images/social-preview.png)
 
-![Version](https://img.shields.io/badge/version-1.0.3-blue)
+![Version](https://img.shields.io/badge/version-1.0.5-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 Context-aware session management for Claude Code. Automatically save conversations, load summaries on startup, and search past sessions with intelligent project-specific or global context detection.
@@ -14,6 +14,7 @@ Context-aware session management for Claude Code. Automatically save conversatio
 - 🎯 **Context-aware**: Detects project vs global context automatically
 - 🔍 **Search**: Search past conversations in current context
 - 📁 **Organized**: Clean directory structure per project
+- 🧹 **Auto-cleanup**: Automatically manages disk space with configurable storage limits
 - 🚀 **Zero dependencies**: Pure Node.js, no installation required
 
 ## How It Works
@@ -37,12 +38,33 @@ Plugin (global):           ~/.claude/plugins/ccm/
         (project-specific)                   (global)
 ```
 
+### Understanding Session Storage Behavior
+
+CCM uses smart detection that adapts as your project evolves:
+
+**First Session in a New Folder:**
+- No `.claude` directory exists yet
+- Sessions temporarily save to `~/.claude/sessions/` (global fallback)
+- This is normal for first-time use in a directory
+
+**After Claude Creates `.claude` Folder:**
+- Claude Code may create `.claude` automatically (via `/init` or other features)
+- CCM detects the `.claude` folder and switches to project mode
+- All new sessions save to `<project>/.claude/sessions/`
+- Previous global sessions remain in `~/.claude/sessions/` (not migrated)
+
+**Why This Design?**
+- **Flexible**: Works immediately without setup
+- **Automatic**: Seamlessly transitions when `.claude` appears
+- **No data loss**: Global sessions preserved separately
+- **Independent contexts**: Each project has its own session history and storage limit
+
 CCM automatically adapts to your working context:
 
 ### 🚀 Project-Specific Mode (Claude Project)
 **Activated when:** You're in a directory with a `.claude` folder (anywhere in the parent tree)
 
-When you initialize Claude Code in a directory (via `/init` or manually creating `.claude/`), that becomes a **Claude project**. CCM will store all sessions for that project and its subdirectories in one place.
+When you initialize Claude Code in a directory (via `/init` or when Claude creates `.claude/`), that becomes a **Claude project**. CCM will store all sessions for that project and its subdirectories in one place.
 
 **Session location:** `<claude-project-root>/.claude/sessions/`
 
@@ -279,7 +301,27 @@ claude
 
 ## Examples
 
-### Scenario 1: Multiple Projects
+### Scenario 1: First Time in a New Directory
+
+```bash
+# Day 1: First session in new project
+cd ~/new-project
+claude
+# No .claude folder yet
+# 💾 Sessions save to: ~/.claude/sessions/ (global)
+# Ask Claude some questions, exit
+
+# Day 2: Claude creates .claude folder (via /init or automatically)
+cd ~/new-project
+claude
+# ✅ .claude folder now exists!
+# 💾 Sessions now save to: ~/new-project/.claude/sessions/ (project-specific)
+# Previous day's session still in ~/.claude/sessions/
+```
+
+This transition is automatic and seamless. Each location has its own 500 MB storage limit.
+
+### Scenario 2: Multiple Projects
 
 ```bash
 # Working on Project A
@@ -301,7 +343,7 @@ claude
 # Shows: Last global conversation
 ```
 
-### Scenario 2: Browse and Search
+### Scenario 3: Browse and Search
 
 ```bash
 # Browse recent sessions with context info
@@ -358,6 +400,63 @@ your-project/
 ```
 
 ## Configuration
+
+### Storage Management
+
+CCM automatically manages disk space to prevent unlimited growth. By default, session storage is limited to 500 MB per context (project or global).
+
+#### How It Works
+
+1. **Automatic cleanup**: Runs after every session save (when you exit Claude Code)
+2. **Size check**: Calculates total storage used by sessions
+3. **Smart deletion**: If over limit, deletes oldest sessions first
+4. **Stops at 90%**: Cleanup stops when storage is at 90% of limit
+5. **Preserves summaries**: Latest summary is always kept
+6. **Zero maintenance**: Completely automatic - no manual cleanup needed
+
+#### Configure Storage Limit
+
+Edit `.claude-plugin/config.json` in the plugin directory:
+
+```json
+{
+  "maxStorageMB": 500,
+  "cleanupEnabled": true,
+  "preserveLatestSummary": true
+}
+```
+
+**Settings:**
+- `maxStorageMB`: Maximum storage in MB (default: 500)
+- `cleanupEnabled`: Enable auto-cleanup (default: true)
+- `preserveLatestSummary`: Always preserve latest.md (default: true)
+
+**Examples:**
+```json
+// Conservative: 100 MB limit
+{"maxStorageMB": 100, "cleanupEnabled": true}
+
+// Generous: 1 GB limit
+{"maxStorageMB": 1000, "cleanupEnabled": true}
+
+// Disable auto-cleanup (not recommended)
+{"maxStorageMB": 500, "cleanupEnabled": false}
+```
+
+#### What Gets Cleaned
+
+- **Session files**: Oldest *.json and *.jsonl files deleted first
+- **Dated summaries**: Only last 30 dated summaries kept
+- **Always preserved**: latest.md summary file
+
+#### Context-Aware Limits
+
+Each context (project or global) has its own independent storage limit:
+- Project A: 500 MB limit
+- Project B: 500 MB limit
+- Global: 500 MB limit
+
+All managed separately.
 
 ### .gitignore Setup
 
@@ -432,6 +531,52 @@ ccm/
 ├── package.json
 └── README.md
 ```
+
+## Frequently Asked Questions
+
+### Why are my sessions in ~/.claude/sessions/ instead of my project?
+
+This happens on your first session in a new directory before the `.claude` folder is created. Once Claude Code creates the `.claude` folder (automatically or via `/init`), new sessions will save to your project directory. The global sessions remain in `~/.claude/sessions/` and won't be migrated automatically.
+
+### Do global and project sessions share the same storage limit?
+
+No. Each context has its own independent 500 MB storage limit:
+- Global sessions: `~/.claude/sessions/` (500 MB)
+- Project A: `~/project-a/.claude/sessions/` (500 MB)
+- Project B: `~/project-b/.claude/sessions/` (500 MB)
+
+They are managed separately and won't affect each other.
+
+### What happens to my old sessions when cleanup runs?
+
+When storage exceeds 500 MB, the oldest session files are automatically deleted (oldest first). The latest summary (`latest.md`) is always preserved. Cleanup runs automatically when you exit Claude Code, so you never need to manually manage storage.
+
+### Can I change the storage limit?
+
+Yes. Edit `.claude-plugin/config.json` in the plugin directory:
+```json
+{
+  "maxStorageMB": 1000,  // Set to 1 GB
+  "cleanupEnabled": true
+}
+```
+
+### Will sessions be shared across subdirectories?
+
+Yes, if they're in the same Claude project. CCM searches up the directory tree for `.claude` folder. All subdirectories within that project share the same session storage at `<project-root>/.claude/sessions/`.
+
+Example:
+```
+~/my-project/.claude/          ← Project root
+~/my-project/frontend/         ← Shares sessions with parent
+~/my-project/backend/          ← Shares sessions with parent
+```
+
+### How do I clean up old global sessions?
+
+If you've accumulated sessions in `~/.claude/sessions/` before projects had `.claude` folders, you can:
+1. Manually delete them: `rm -rf ~/.claude/sessions/*` (keeps directory)
+2. Let automatic cleanup handle it over time (it also applies to global sessions)
 
 ## Troubleshooting
 

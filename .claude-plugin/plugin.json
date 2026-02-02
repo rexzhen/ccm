@@ -1,7 +1,7 @@
 {
   "name": "ccm",
   "description": "Automatically save sessions, load summaries, and search conversation history with context-aware project-specific or global session management",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "author": {
     "name": "Rex Zhen",
     "email": "rex.zhen@gmail.com",
