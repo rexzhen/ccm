@@ -29,16 +29,6 @@
 - Developers switching between multiple projects
 - Anyone who values conversation continuity
 
-## ✨ Features
-
-- 🔄 **Auto-save**: Sessions automatically saved when you exit Claude Code
-- 📋 **Auto-load**: Latest summary displayed at session start
-- 🎯 **Context-aware**: Detects project vs global context automatically
-- 🔍 **Search**: Search past conversations in current context
-- 📁 **Organized**: Clean directory structure per project
-- 🧹 **Auto-cleanup**: Automatically manages disk space with 500 MB default limit
-- 🚀 **Zero dependencies**: Pure Node.js, no installation required
-
 ## 🚀 Quick Start
 
 ### Installation
