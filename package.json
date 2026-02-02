@@ -1,6 +1,6 @@
 {
   "name": "claude-code-memory-management",
-  "version": "1.0.5",
+  "version": "1.0.4",
   "description": "Context-aware session management for Claude Code with AI-powered summaries",
   "main": "scripts/session-manager.js",
   "bin": {

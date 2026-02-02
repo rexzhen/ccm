@@ -2,7 +2,7 @@
 
 ![CCM Social Preview](assets/images/social-preview.png)
 
-![Version](https://img.shields.io/badge/version-1.0.5-blue)
+![Version](https://img.shields.io/badge/version-1.0.4-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 > **Ever wished Claude Code remembered your previous conversations?**
@@ -240,12 +240,14 @@ Rex Zhen
 
 ## 📋 Changelog
 
-### v1.0.5 (2026-02-02)
+### v1.0.4 (In Progress)
 - Add automatic storage management with 500 MB default limit
 - Implement configurable storage limits per context
 - Add automatic cleanup on session exit
 - Enhanced documentation with separate doc files
 - Add FAQ, How It Works, and Examples documentation
+- Add problem/solution section to README
+- Add comprehensive uninstallation guide
 
 ### v1.0.4 (2026-02-01)
 - Enhanced session management and summary generation
