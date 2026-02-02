@@ -126,6 +126,111 @@ Should show:
 }
 ```
 
+## Uninstallation
+
+### How do I uninstall the CCM plugin?
+
+```bash
+# Uninstall the plugin
+claude plugin uninstall ccm
+
+# Remove the marketplace (optional)
+claude plugin marketplace remove ccm-marketplace
+```
+
+The plugin is now uninstalled. However, your session history remains on disk.
+
+### How do I remove all session history?
+
+After uninstalling, if you want to remove all saved sessions:
+
+**Remove global sessions:**
+```bash
+# Remove all global sessions
+rm -rf ~/.claude/sessions/
+
+# Or keep the directory structure but remove files
+rm -rf ~/.claude/sessions/*
+```
+
+**Remove project-specific sessions:**
+```bash
+# In each project directory
+rm -rf .claude/sessions/
+
+# Or find and remove all project sessions
+find ~/projects -type d -name "sessions" -path "*/.claude/sessions" -exec rm -rf {} +
+```
+
+**⚠️ Warning:** This permanently deletes all conversation history. There is no undo.
+
+### Can I keep sessions but disable the plugin temporarily?
+
+Yes, uninstalling the plugin doesn't delete sessions. You can:
+
+```bash
+# Uninstall plugin
+claude plugin uninstall ccm
+
+# Sessions remain in:
+# - ~/.claude/sessions/ (global)
+# - <project>/.claude/sessions/ (projects)
+
+# Reinstall later to restore functionality
+claude plugin install ccm
+```
+
+Your sessions will still be there and the plugin will pick up where it left off.
+
+### How do I export my sessions before uninstalling?
+
+```bash
+# Backup global sessions
+cp -r ~/.claude/sessions/ ~/ccm-backup-$(date +%Y%m%d)/
+
+# Backup specific project sessions
+cp -r ~/my-project/.claude/sessions/ ~/ccm-project-backup-$(date +%Y%m%d)/
+
+# Create a compressed archive
+tar -czf ccm-sessions-backup-$(date +%Y%m%d).tar.gz ~/.claude/sessions/
+```
+
+### What files does CCM create?
+
+**Plugin files** (removed by uninstall):
+- `~/.claude/plugins/ccm/` - Plugin code and scripts
+
+**Session files** (NOT removed by uninstall):
+- `~/.claude/sessions/` - Global session history
+- `<project>/.claude/sessions/` - Project-specific session history
+
+**Config files** (removed by uninstall):
+- Stored within plugin directory, removed with plugin
+
+### Clean uninstall checklist
+
+For a complete removal:
+
+```bash
+# 1. Uninstall plugin
+claude plugin uninstall ccm
+
+# 2. Remove marketplace
+claude plugin marketplace remove ccm-marketplace
+
+# 3. Remove global sessions
+rm -rf ~/.claude/sessions/
+
+# 4. Remove project sessions (review first!)
+find ~ -type d -name "sessions" -path "*/.claude/sessions" 2>/dev/null
+
+# 5. Remove from .gitignore (if you added it)
+# Edit .gitignore and remove: .claude/sessions/
+
+# 6. Remove source clone (if you cloned locally)
+rm -rf ~/ccm-plugin  # or wherever you cloned it
+```
+
 ---
 
 **More Questions?** [Open an issue](https://github.com/rexzhen/ccm/issues)

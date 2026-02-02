@@ -196,6 +196,21 @@ cat ~/.claude/plugins/ccm/.claude-plugin/config.json
 
 [More troubleshooting →](docs/FAQ.md#troubleshooting)
 
+## 🗑️ Uninstallation
+
+```bash
+# Uninstall plugin
+claude plugin uninstall ccm
+
+# Optional: Remove session history
+rm -rf ~/.claude/sessions/              # Global sessions
+rm -rf <project>/.claude/sessions/      # Project sessions
+```
+
+**Note:** Uninstalling the plugin does NOT delete your session history. Sessions remain on disk unless explicitly removed.
+
+[Complete uninstall guide →](docs/FAQ.md#uninstallation)
+
 ## 📚 Additional Resources
 
 - **[FAQ](docs/FAQ.md)** - Frequently asked questions
