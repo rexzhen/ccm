@@ -99,6 +99,69 @@ That's it! The plugin is now active. Session storage location is determined auto
 - **In a project directory:** Sessions saved to `<project>/.claude/sessions/`
 - **Outside projects:** Sessions saved to `~/.claude/sessions/`
 
+## Setup
+
+### Basic Setup (Default Mode)
+
+The plugin works out-of-the-box with basic session management:
+- ✅ Automatic session saving as JSONL
+- ✅ Basic summaries generated from transcript parsing
+- ✅ Session history and search
+
+**No additional setup required for basic functionality.**
+
+### Enhanced Setup (AI-Powered Summaries)
+
+For **Claude-powered AI summaries** that are more coherent, deduplicated, and focused on decisions/next steps, you need to configure the Claude CLI:
+
+#### 1. Install Claude CLI
+
+```bash
+# Install via npm
+npm install -g @anthropic-ai/claude-cli
+
+# Or via homebrew (macOS)
+brew install anthropic/tap/claude
+```
+
+#### 2. Set Your API Key
+
+```bash
+# Add to your shell profile (~/.zshrc, ~/.bashrc, etc.)
+export ANTHROPIC_API_KEY="your-api-key-here"
+
+# Or set it temporarily for testing
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+**Get your API key:** https://console.anthropic.com/settings/keys
+
+#### 3. Verify Setup
+
+```bash
+# Test that Claude CLI works
+claude --version
+
+# Verify API key is set
+echo $ANTHROPIC_API_KEY
+```
+
+### What You Get With Enhanced Setup
+
+**Without Claude CLI (Basic Mode):**
+- ✅ Sessions saved automatically
+- ✅ Basic summaries from transcript parsing
+- ✅ Search and history
+
+**With Claude CLI (Enhanced Mode):**
+- ✅ All basic features
+- ✨ **AI-powered summaries** - coherent, deduplicated, focused
+- ✨ **Intelligent merging** - combines previous summary with new session
+- ✨ **Better insights** - highlights key decisions and next steps
+- ✨ **Higher quality** - natural language summaries instead of parsed text
+
+**Note:** If Claude CLI or API key is not configured, the plugin will display a warning message and fall back to basic mode. Session saving still works normally.
+
 ### Verification
 
 ```bash

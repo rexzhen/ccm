@@ -90,7 +90,7 @@ class SessionManager {
     this.ensureDirectories();
 
     const timestamp = new Date().toISOString();
-    const filename = `${timestamp.replace(/[:.]/g, '-')}.json`;
+    const filename = `${timestamp.replace(/[:.]/g, '-')}.jsonl`;
     const filepath = path.join(this.sessionDir, filename);
 
     const data = {
@@ -102,7 +102,8 @@ class SessionManager {
       ...sessionData
     };
 
-    fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
+    // Save as JSONL format (one JSON object per line)
+    fs.writeFileSync(filepath, JSON.stringify(data) + '\n');
 
     // Update summary
     this.saveSummary(data);
@@ -210,7 +211,7 @@ ${decisionsSection}${nextStepsSection}${topicsSection}${messageStats}
     this.ensureDirectories();
 
     const sessionFiles = fs.readdirSync(this.sessionDir)
-      .filter(f => f.endsWith('.json'))
+      .filter(f => f.endsWith('.json') || f.endsWith('.jsonl'))
       .sort()
       .reverse(); // Most recent first
 
@@ -219,7 +220,10 @@ ${decisionsSection}${nextStepsSection}${topicsSection}${messageStats}
     for (const file of sessionFiles) {
       try {
         const content = fs.readFileSync(path.join(this.sessionDir, file), 'utf8');
-        const data = JSON.parse(content);
+        // Handle both JSON and JSONL formats
+        const data = file.endsWith('.jsonl')
+          ? JSON.parse(content.trim().split('\n')[0]) // First line of JSONL
+          : JSON.parse(content);
         const searchable = JSON.stringify(data).toLowerCase();
 
         if (searchable.includes(query.toLowerCase())) {
@@ -546,7 +550,7 @@ ${decisionsSection}${nextStepsSection}${topicsSection}${messageStats}
     this.ensureDirectories();
 
     const sessionFiles = fs.readdirSync(this.sessionDir)
-      .filter(f => f.endsWith('.json'))
+      .filter(f => f.endsWith('.json') || f.endsWith('.jsonl'))
       .sort()
       .reverse()
       .slice(0, limit);
@@ -554,7 +558,10 @@ ${decisionsSection}${nextStepsSection}${topicsSection}${messageStats}
     return sessionFiles.map(file => {
       try {
         const content = fs.readFileSync(path.join(this.sessionDir, file), 'utf8');
-        const data = JSON.parse(content);
+        // Handle both JSON and JSONL formats
+        const data = file.endsWith('.jsonl')
+          ? JSON.parse(content.trim().split('\n')[0]) // First line of JSONL
+          : JSON.parse(content);
         return {
           filename: file,
           timestamp: data.timestamp,

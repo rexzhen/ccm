@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/session-manager.js save"
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/save-session.sh"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/show-summary.js"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/check-sessions.js"
           }
         ]
       }
