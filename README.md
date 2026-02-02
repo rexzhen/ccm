@@ -5,7 +5,29 @@
 ![Version](https://img.shields.io/badge/version-1.0.5-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Context-aware session management for Claude Code. Automatically save conversations, load summaries on startup, and search past sessions with intelligent project-specific or global context detection.
+> **Ever wished Claude Code remembered your previous conversations?**
+>
+> CCM automatically saves every session, loads context when you return, and helps you search past conversations—so you never lose progress or repeat yourself.
+
+## 💭 What Problem Does This Solve?
+
+**Without CCM:**
+- 😞 Each new session starts from scratch—Claude has no memory of previous work
+- 🔍 Can't search through past conversations to find what you discussed
+- 📝 Need to manually copy important decisions or code snippets before exiting
+- 🔄 Repeat explanations every time you start a new session
+
+**With CCM:**
+- ✅ Automatic session continuity—previous context loads on startup
+- 🔍 Search your entire conversation history across all projects
+- 💾 Zero effort—everything saved automatically when you exit
+- 🎯 Context-aware—each project has its own conversation history
+
+**Perfect for:**
+- Long-running projects with multiple sessions
+- Teams wanting to track decision history
+- Developers switching between multiple projects
+- Anyone who values conversation continuity
 
 ## ✨ Features
 
