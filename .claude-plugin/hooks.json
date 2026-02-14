@@ -1,0 +1,26 @@
+{
+  "description": "Automatically save sessions when exiting Claude Code and load summaries on startup",
+  "hooks": {
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/save-session.sh",
+            "timeout": 300
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/check-sessions.js"
+          }
+        ]
+      }
+    ]
+  }
+}
